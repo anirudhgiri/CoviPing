@@ -21,22 +21,13 @@
                 <div id="info-div">
                     <p id="info-text"></p>
                 </div>
-            <form id="user-details-form">
+            <form id="user-details-form" autocomplete="off">
                 <div class="form-group">
-                    <input type="text" id="name" name="name" class="form-control" placeholder="Name" required>
+                    <input type="text" id="name" name="name" class="form-control" placeholder="Name" autocomplete="new-password" required>
                 </div>
 
                 <div class="form-group">
-                    <input type="email" id="email" name="email" class="form-control" placeholder="Email Address" required>
-                </div>
-
-                <div class="form-group">
-                    <select name="vacPref" id="vac-pref" class="custom-select" required>
-                        <option selected disabled value="">Vaccine Preference</option>
-                        <option value="np">Any</option>
-                        <option value="az">Covishield Only</option>
-                        <option value="bb">Covaxin Only</option>
-                    </select>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="Email Address" autocomplete="new-password" required>
                 </div>
                 
                 <div class="form-group">
@@ -111,7 +102,6 @@
         <div class="col-lg-4">
             <h5>What if I want to stop recieving the emails?</h5>
             <p>You will be provided with an unsubscribe link in every notification email which you can click any time to unsubscribe from the notifications.
-                <br><br>Like the tool? Do consider sending me a tip if you can <a href="buymeacoffee.com/anirudhgiri">here</a>!
             </p>
         </div>
     </div>
@@ -126,7 +116,7 @@
         for(let i = dist_select.length -1; i > 0; i--)
             dist_select.remove(i);
 
-        const districts = fetch(`https://cdn-api.co-vin.in/api/v2/admin/location/districts/${event.target.value}`).then(async response => {
+        fetch(`https://cdn-api.co-vin.in/api/v2/admin/location/districts/${event.target.value}`).then(async response => {
             const resp = await response.json();
             let districts = resp.districts;
             for(dist of districts){
@@ -135,9 +125,8 @@
                 option.value = dist.district_id;
                 dist_select.add(option);
             }
+            dist_select.removeAttribute('disabled');
         });
-        
-        dist_select.removeAttribute('disabled');
     });
 </script>
 
@@ -146,6 +135,9 @@
     const form = document.getElementById('user-details-form');
     form.addEventListener('submit',(event) => {
         event.preventDefault();
+
+        const infoDiv = document.getElementById('info-div');
+        infoDiv.style.display = "none";
 
         const submitButton = document.getElementById('form-submit-btn');
         submitButton.disabled = true;
@@ -157,7 +149,7 @@
         data["state"] = document.getElementById('state').options[document.getElementById('state').selectedIndex].text;
         data["dist"] = document.getElementById('district').options[document.getElementById('district').selectedIndex].text;
         
-        fetch('http://localhost:8080/addUser',
+        fetch('https://coviping-server.herokuapp.com/addUser',
         {
             method: 'POST',
             headers: {
@@ -165,17 +157,17 @@
             },
             body: JSON.stringify(data)
         }).then(async response => {
+            await new Promise(r => setTimeout(r, 500));
             submitButton.disabled = false;
-            const infoDiv = document.getElementById('info-div');
             const infoText = document.getElementById('info-text');
-            
+        
             infoDiv.style.display = "block";
-            infoDiv.classList.add('alert');
-            infoDiv.classList.add('alert-dismissible');
+            infoDiv.className = "";
+            infoDiv.className += 'alert';
             let json = await response.json();
             const status = json.status;
             if( status == "success"){
-                infoDiv.classList.add('alert-success');
+                infoDiv.className+=' alert-success';
                 infoText.innerHTML = '<span class="far fa-check-circle"></span> <strong>Success!</strong> You will now recieve notification emails when vaccination slots near you open up!' 
                 form.reset();
             }
@@ -183,10 +175,9 @@
             else if(status == "failed"){
                 if(!json.error)
                     json.error = "Internal error. Please try again later. (Error Code: NEMR#185)";
-                infoDiv.classList.add('alert-danger');
+                infoDiv.className+=' alert-danger';
                 infoText.innerHTML = `<span class="fas fa-times-circle"></span> <strong>Error!</strong> ${json.error}`; 
             }
-            infoDiv.innerHTML += '<button type="button" class="close" data-dismiss="alert" aria-label="Close"> <span aria-hidden="true">&times;</span> </button>'
         })
     });
 </script>
